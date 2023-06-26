@@ -3,21 +3,21 @@ use std::time::Duration;
 mod cart;
 
 
-pub struct Emulator <'a>{
+pub struct Emulator{
     pub paused: bool,
     pub running: bool,
     pub ticks: u64,
-    cart: cart::Cart<'a>
+    cart: cart::Cart
 }
 
-impl Emulator<'_>{
+impl Emulator{
 
-    pub fn new() -> Emulator<'static>{
+    pub fn new() -> Emulator{
         return Emulator {paused: false, running: false, ticks: 0, cart: cart::Cart::new()};
 
     }
 
-    pub fn run(&mut self, cart_name: &str) -> Result<(), String>{
+    pub fn run(&mut self, cart_name: String) -> Result<(), String>{
 
         self.cart.load_cart(cart_name);
 

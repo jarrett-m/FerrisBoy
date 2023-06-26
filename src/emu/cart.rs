@@ -1,8 +1,8 @@
 
-pub struct Cart<'a>{
-    filename: &'a str,
+pub struct Cart{
+    filename: String,
     rom_size: u32,
-    rom_data:  u8,
+    rom_data:  Vec<u8>,
     rom_header: RomHeader,
 }
 
@@ -213,15 +213,20 @@ static ROM_TYPES: [&str; 35] = [
     "MBC7+SENSOR+RUMBLE+RAM+BATTERY",
 ];
 
+use std::io::Read;
+use std::fs::File;
 
-impl Cart<'_> {
-    pub fn new() -> Cart<'static>{
-        let empty = "empty";
-        return Cart{filename: empty, rom_data: 0, rom_size: 0, rom_header: RomHeader::empty_header()};
+impl Cart {
+    pub fn new() -> Cart{
+        let empty = String::from("empty");
+        return Cart{filename: empty, rom_data: Vec::new(), rom_size: 0, rom_header: RomHeader::empty_header()};
     }
 
-    pub fn load_cart(&mut self, filename: &str) -> (){
-        self.rom_header = RomHeader::new(filename);
+    pub fn load_cart(&mut self, filename: String) -> (){
+        self.filename = filename;
+        self.rom_header = RomHeader::new(self.filename.clone());
+        let mut file = File::open(self.filename.clone()).unwrap();
+        file.read_to_end(&mut self.rom_data);
     }
 
     pub fn cart_lic_name<'a>(&self) -> &'a str{
@@ -262,15 +267,13 @@ struct RomHeader{
     gbl_checksum:   u8,
 }
 
-use std::fs::File;
-use std::io::Read;
 
 impl RomHeader{
     pub fn empty_header() -> RomHeader{
         return RomHeader { entry: [0; 4], logo: [0; 0x30], title: ['\0'; 16], new_lic_code: 0, sgb_flag: 0, cart_type: 0, rom_size: 0, ram_size: 0, dest_code: 0, lic_code: 0, version: 0, checksum: 0, gbl_checksum: 0 }
     }
 
-    fn new(filename: &str) -> RomHeader{
+    fn new(filename: String) -> RomHeader{
 
         let mut file = File::open(filename).unwrap();
         let mut buffer = Vec::new();
