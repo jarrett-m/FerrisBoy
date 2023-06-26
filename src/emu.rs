@@ -11,16 +11,16 @@ pub struct Emulator {
 
 impl Emulator {
     pub fn new() -> Emulator {
-        return Emulator {
+        Emulator {
             paused: false,
             running: false,
             ticks: 0,
             cart: cart::Cart::new(),
-        };
+        }
     }
 
     pub fn run(&mut self, cart_name: String) -> Result<(), String> {
-        self.cart.load_cart(cart_name);
+        let _ = self.cart.load_cart(cart_name);
 
         self.running = true;
         self.paused = false;
@@ -47,7 +47,7 @@ impl Emulator {
         }
         */
 
-        return Ok(());
+        Ok(())
     }
 
     fn delay(ms: u64) {
