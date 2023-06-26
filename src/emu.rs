@@ -2,23 +2,24 @@ use std::thread;
 use std::time::Duration;
 mod cart;
 
-
-pub struct Emulator{
+pub struct Emulator {
     pub paused: bool,
     pub running: bool,
     pub ticks: u64,
-    cart: cart::Cart
+    cart: cart::Cart,
 }
 
-impl Emulator{
-
-    pub fn new() -> Emulator{
-        return Emulator {paused: false, running: false, ticks: 0, cart: cart::Cart::new()};
-
+impl Emulator {
+    pub fn new() -> Emulator {
+        return Emulator {
+            paused: false,
+            running: false,
+            ticks: 0,
+            cart: cart::Cart::new(),
+        };
     }
 
-    pub fn run(&mut self, cart_name: String) -> Result<(), String>{
-
+    pub fn run(&mut self, cart_name: String) -> Result<(), String> {
         self.cart.load_cart(cart_name);
 
         self.running = true;
@@ -27,8 +28,8 @@ impl Emulator{
 
         self.cart.print_data();
 
-        while self.running{
-            if self.paused{
+        while self.running {
+            if self.paused {
                 Self::delay(10);
                 continue;
             }
@@ -43,17 +44,13 @@ impl Emulator{
                 return Err(error);
             }
             Ok(()) ={}
-        } 
+        }
         */
 
-        return Ok(())
+        return Ok(());
     }
-    
-    fn delay(ms: u64){
+
+    fn delay(ms: u64) {
         thread::sleep(Duration::from_millis(ms));
     }
-
-
 }
-
-

@@ -1,8 +1,7 @@
-
-pub struct Cart{
+pub struct Cart {
     filename: String,
-    rom_size: u32,
-    rom_data:  Vec<u8>,
+    rom_size: usize,
+    rom_data: Vec<u8>,
     rom_header: RomHeader,
 }
 
@@ -174,7 +173,6 @@ static LIC_CODE: [&str; 0xA5] = [
     "Konami",
 ];
 
-
 static ROM_TYPES: [&str; 35] = [
     "ROM ONLY",
     "MBC1",
@@ -213,97 +211,144 @@ static ROM_TYPES: [&str; 35] = [
     "MBC7+SENSOR+RUMBLE+RAM+BATTERY",
 ];
 
-use std::io::Read;
 use std::fs::File;
+use std::io::Read;
 
 impl Cart {
-    pub fn new() -> Cart{
+    pub fn new() -> Cart {
         let empty = String::from("empty");
-        return Cart{filename: empty, rom_data: Vec::new(), rom_size: 0, rom_header: RomHeader::empty_header()};
+        Cart {
+            filename: empty,
+            rom_data: Vec::new(),
+            rom_size: 0,
+            rom_header: RomHeader::empty_header(),
+        }
     }
 
-    pub fn load_cart(&mut self, filename: String) -> (){
+    pub fn load_cart(&mut self, filename: String) -> Result<(), std::io::Error> {
         self.filename = filename;
         self.rom_header = RomHeader::new(self.filename.clone());
-        let mut file = File::open(self.filename.clone()).unwrap();
-        file.read_to_end(&mut self.rom_data);
+        let mut file = File::open(&self.filename)?;
+        file.read_to_end(&mut self.rom_data)?;
+        self.rom_size = self.rom_data.len();
+        Ok(())
     }
 
-    pub fn cart_lic_name<'a>(&self) -> &'a str{
-        if self.rom_header.new_lic_code <= 0xA4{
-            return LIC_CODE[self.rom_header.lic_code as usize];
+    pub fn cart_old_lic_name(&self) -> String {
+        if self.rom_header.lic_code <= 0xA4 {
+            return String::from(LIC_CODE[self.rom_header.lic_code as usize]);
         }
-        return "unknown";
+        String::from("UNKNOWN")
     }
 
-    pub fn cart_type_name<'a>(&self)-> &'a str{
+    pub fn cart_new_lic_name(&self) -> String {
+        if self.rom_header.new_lic_code <= 0xA4 {
+            return String::from(LIC_CODE[self.rom_header.new_lic_code as usize]);
+        }
+        String::from("UNKNOWN")
+    }
+
+    pub fn cart_type_name(&self) -> String {
         if self.rom_header.cart_type <= 0x22 {
-            return ROM_TYPES[self.rom_header.cart_type as usize];
+            return String::from(ROM_TYPES[self.rom_header.cart_type as usize]);
         }
-        return "UNKNOWN";
+        String::from("UNKNOWN")
     }
 
-    pub fn print_data(&self){
-        println!("{:#?}", self.rom_header);
-    }
-    
+    fn checksum(&self) -> String {
+        let mut checksum: u8 = 0;
+        for address in 0x0134..=0x014C {
+            checksum = checksum
+                .wrapping_sub(self.rom_data[address])
+                .wrapping_sub(1);
+        }
 
+        if checksum == self.rom_data[0x014D] {
+            return String::from("PASS");
+        }
+        String::from("FAIL")
+    }
+
+    pub fn print_data(&self) {
+        // println!("{:#?}", self.rom_header);
+        println!("Cartridge Loaded");
+        println!(
+            "\tTitle:    {}",
+            String::from_iter(self.rom_header.title.iter())
+        );
+        println!(
+            "\tType:     {} ({})",
+            self.rom_header.cart_type,
+            self.cart_type_name()
+        );
+        println!("\tROM Size: {} KB", self.rom_size / 1000);
+        println!("\tRAM Size: {}", self.rom_header.ram_size);
+        println!(
+            "\tLIC Code: {} (Old: {}) (New: {})",
+            self.rom_header.lic_code,
+            self.cart_old_lic_name(),
+            self.cart_new_lic_name()
+        );
+        println!("\tROM Vers: {}", self.rom_header.version);
+        println!(
+            "\tChecksum: {} ({})",
+            self.rom_header.checksum,
+            self.checksum()
+        );
+    }
 }
 
-
-struct RomHeader{
-    entry:          [u8; 4],
-    logo:           [u8; 0x30],
-    title:          [char; 16],
-    new_lic_code:   u8,
-    sgb_flag:       u8,
-    cart_type:      u8,
-    rom_size:       u8,
-    ram_size:       u8,
-    dest_code:      u8,
-    lic_code:       u8,
-    version:        u8,
-    checksum:       u8,
-    gbl_checksum:   u8,
+#[derive(Debug)]
+struct RomHeader {
+    entry: [u8; 4],
+    logo: [u8; 0x30],
+    title: [char; 16],
+    new_lic_code: u8,
+    sgb_flag: u8,
+    cart_type: u8,
+    rom_size: u8,
+    ram_size: u8,
+    dest_code: u8,
+    lic_code: u8,
+    version: u8,
+    checksum: u8,
+    gbl_checksum: u8,
 }
 
-
-impl RomHeader{
-    pub fn empty_header() -> RomHeader{
-        return RomHeader { entry: [0; 4], logo: [0; 0x30], title: ['\0'; 16], new_lic_code: 0, sgb_flag: 0, cart_type: 0, rom_size: 0, ram_size: 0, dest_code: 0, lic_code: 0, version: 0, checksum: 0, gbl_checksum: 0 }
+impl RomHeader {
+    pub fn empty_header() -> RomHeader {
+        RomHeader {
+            entry: [0; 4],
+            logo: [0; 0x30],
+            title: ['\0'; 16],
+            new_lic_code: 0,
+            sgb_flag: 0,
+            cart_type: 0,
+            rom_size: 0,
+            ram_size: 0,
+            dest_code: 0,
+            lic_code: 0,
+            version: 0,
+            checksum: 0,
+            gbl_checksum: 0,
+        }
     }
 
-    fn new(filename: String) -> RomHeader{
-
+    fn new(filename: String) -> RomHeader {
         let mut file = File::open(filename).unwrap();
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).unwrap();
-    
 
-        let rom_header = RomHeader{
-            entry: {
-                let result: [u8; 4] = match buffer[0x0100..=0x0103].try_into(){
-                    Ok(slice) => {
-                        slice
-                    }Err(_) => {
-                        [0,0,0,0]
-                    }
-                };
-                result
-            },
-            logo: {
-                let result: [u8; 48] = match buffer[0x0104..=0x0133].try_into(){
-                    Ok(slice) => {
-                        slice
-                    }Err(_) => {
-                        [0; 48]
-                    }
-                };
-                result
-            },
+        let rom_header = RomHeader {
+            entry: { buffer[0x0100..=0x0103].try_into().unwrap_or([0, 0, 0, 0]) },
+            logo: { buffer[0x0104..=0x0133].try_into().unwrap_or([0; 48]) },
             title: {
                 let mut array: [char; 16] = ['\0'; 16];
-                for (i, c) in String::from_utf8_lossy(&buffer[0x0134..=0x0143]).chars().take(16).enumerate(){
+                for (i, c) in String::from_utf8_lossy(&buffer[0x0134..=0x0143])
+                    .chars()
+                    .take(16)
+                    .enumerate()
+                {
                     array[i] = c;
                 }
                 array
@@ -331,28 +376,6 @@ impl RomHeader{
                 result.unwrap()
             },
         };
-        
-        return rom_header;
-    }
-}
-
-use std::fmt;
-impl fmt::Debug for RomHeader {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RomHeader")
-            .field("entry", &self.entry)
-            .field("logo", &self.logo)
-            .field("title", &self.title)
-            .field("new_lic_code", &self.new_lic_code)
-            .field("sgb_flag", &self.sgb_flag)
-            .field("cart_type", &self.cart_type)
-            .field("rom_size", &self.rom_size)
-            .field("ram_size", &self.ram_size)
-            .field("dest_code", &self.dest_code)
-            .field("lic_code", &self.lic_code)
-            .field("version", &self.version)
-            .field("checksum", &self.checksum)
-            .field("gbl_checksum", &self.gbl_checksum)
-            .finish()
+        rom_header
     }
 }
